@@ -20,6 +20,14 @@
                 <span class="component-desc">Store episodes in season folders?</span>
             </label>
         </div>
+        
+        <div class="field-pair alt">
+            <input type="checkbox" name="seasonPacks" id="seasonPacks" #if $sickbeard.SEASON_PACKS_DEFAULT then "checked=\"checked\"" else ""# />
+            <label for="seasonPacks" class="clearfix">
+                <span class="component-title">Season Packs</span>
+                <span class="component-desc">Download full seasons as single nzb?</span>
+            </label>
+        </div>
 
         #set $qualities = $Quality.splitQuality($sickbeard.QUALITY_DEFAULT)
         #set global $anyQualities = $qualities[0]

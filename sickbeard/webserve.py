@@ -354,6 +354,9 @@ class Manage:
         season_folders_all_same = True
         last_season_folders = None
 
+        season_packs_all_same = True
+        last_season_packs = None
+        
         paused_all_same = True
         last_paused = None
 
@@ -381,6 +384,12 @@ class Manage:
                     season_folders_all_same = False
                 else:
                     last_season_folders = curShow.seasonfolders
+            
+            if season_packs_all_same:
+                if last_season_packs not in (None, curShow.seasonpacks):
+                    season_packs_all_same = False
+                else:
+                    last_season_packs = curShow.seasonpacks
 
             if quality_all_same:
                 if last_quality not in (None, curShow.quality):
@@ -391,13 +400,14 @@ class Manage:
         t.showList = toEdit
         t.paused_value = last_paused if paused_all_same else None
         t.season_folders_value = last_season_folders if season_folders_all_same else None
+        t.season_packs_value = last_season_packs if season_packs_all_same else None
         t.quality_value = last_quality if quality_all_same else None
         t.root_dir_list = root_dir_list
 
         return _munge(t)
 
     @cherrypy.expose
-    def massEditSubmit(self, paused=None, season_folders=None, quality_preset=False,
+    def massEditSubmit(self, paused=None, season_folders=None, season_packs=None, quality_preset=False,
                        anyQualities=[], bestQualities=[], toEdit=None, *args, **kwargs):
 
         dir_map = {}
@@ -435,11 +445,17 @@ class Manage:
             else:
                 new_season_folders = True if season_folders == 'enable' else False
             new_season_folders = 'on' if new_season_folders else 'off'
+            
+            if season_packs == 'keep':
+                new_season_packs = showObj.seasonpacks
+            else:
+                new_season_packs = True if season_packs == 'enable' else False
+            new_season_packs = 'on' if new_season_packs else 'off'
 
             if quality_preset == 'keep':
                 anyQualities, bestQualities = Quality.splitQuality(showObj.quality)
             
-            curErrors += Home().editShow(curShow, new_show_dir, anyQualities, bestQualities, new_season_folders, new_paused, directCall=True)
+            curErrors += Home().editShow(curShow, new_show_dir, anyQualities, bestQualities, new_season_folders, new_season_packs, new_paused, directCall=True)
 
             if curErrors:
                 logger.log(u"Errors: "+str(curErrors), logger.ERROR)
@@ -610,7 +626,7 @@ class ConfigGeneral:
         sickbeard.ROOT_DIRS = rootDirString
     
     @cherrypy.expose
-    def saveAddShowDefaults(self, defaultSeasonFolders, defaultStatus, anyQualities, bestQualities):
+    def saveAddShowDefaults(self, defaultSeasonFolders, defaultSeasonPacks, defaultStatus, anyQualities, bestQualities):
 
         if anyQualities:
             anyQualities = anyQualities.split(',')
@@ -633,7 +649,14 @@ class ConfigGeneral:
             defaultSeasonFolders = 0
 
         sickbeard.SEASON_FOLDERS_DEFAULT = int(defaultSeasonFolders)
-
+        
+        if defaultSeasonPacks == "true":
+            defaultSeasonPacks = 1
+        else:
+            defaultSeasonPacks = 0
+        
+        sickbeard.SEASON_PACKS_DEFAULT = int(defaultSeasonPacks)
+        
     @cherrypy.expose
     def generateKey(self):
         """ Return a new randomized API_KEY
@@ -897,7 +920,7 @@ class ConfigPostProcessing:
         sickbeard.metadata_provider_dict['TIVO'].set_config(tivo_data)
         
         sickbeard.SEASON_FOLDERS_FORMAT = season_folders_format
-
+        
         sickbeard.NAMING_SHOW_NAME = naming_show_name
         sickbeard.NAMING_EP_NAME = naming_ep_name
         sickbeard.NAMING_USE_PERIODS = naming_use_periods
@@ -1678,7 +1701,7 @@ class NewHomeAddShows:
 
     @cherrypy.expose
     def addNewShow(self, whichSeries=None, tvdbLang="en", rootDir=None, defaultStatus=None,
-                   anyQualities=None, bestQualities=None, seasonFolders=None, fullShowPath=None,
+                   anyQualities=None, bestQualities=None, seasonFolders=None, seasonPacks=None, fullShowPath=None,
                    other_shows=None, skipShow=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
@@ -1744,6 +1767,11 @@ class NewHomeAddShows:
             seasonFolders = 1
         else:
             seasonFolders = 0
+            
+        if seasonPacks == "on":
+            seasonPacks = 1
+        else:
+            seasonPacks = 0
         
         if not anyQualities:
             anyQualities = []
@@ -1756,7 +1784,7 @@ class NewHomeAddShows:
         newQuality = Quality.combineQualities(map(int, anyQualities), map(int, bestQualities))
         
         # add the show
-        sickbeard.showQueueScheduler.action.addShow(tvdb_id, show_dir, int(defaultStatus), newQuality, seasonFolders, tvdbLang) #@UndefinedVariable
+        sickbeard.showQueueScheduler.action.addShow(tvdb_id, show_dir, int(defaultStatus), newQuality, seasonFolders, seasonPacks, tvdbLang) #@UndefinedVariable
         ui.notifications.message('Show added', 'Adding the specified show into '+show_dir)
 
         return finishAddShow()
@@ -1827,7 +1855,7 @@ class NewHomeAddShows:
             show_dir, tvdb_id, show_name = cur_show
 
             # add the show
-            sickbeard.showQueueScheduler.action.addShow(tvdb_id, show_dir, SKIPPED, sickbeard.QUALITY_DEFAULT, sickbeard.SEASON_FOLDERS_DEFAULT) #@UndefinedVariable
+            sickbeard.showQueueScheduler.action.addShow(tvdb_id, show_dir, SKIPPED, sickbeard.QUALITY_DEFAULT, sickbeard.SEASON_FOLDERS_DEFAULT, sickbeard.SEASON_PACKS_DEFAULT) #@UndefinedVariable
             num_added += 1
          
         if num_added:
@@ -2235,7 +2263,7 @@ class Home:
         return result['description'] if result else 'Episode not found.'
 
     @cherrypy.expose
-    def editShow(self, show=None, location=None, anyQualities=[], bestQualities=[], seasonfolders=None, paused=None, directCall=False, air_by_date=None, tvdbLang=None):
+    def editShow(self, show=None, location=None, anyQualities=[], bestQualities=[], seasonfolders=None, seasonpacks=None, paused=None, directCall=False, air_by_date=None, tvdbLang=None):
 
         if show == None:
             errString = "Invalid show ID: "+str(show)
@@ -2253,7 +2281,7 @@ class Home:
             else:
                 return _genericMessage("Error", errString)
 
-        if not location and not anyQualities and not bestQualities and not seasonfolders:
+        if not location and not anyQualities and not bestQualities and not seasonfolders and not seasonpacks:
 
             t = PageTemplate(file="editShow.tmpl")
             t.submenu = HomeMenu()
@@ -2266,6 +2294,11 @@ class Home:
             seasonfolders = 1
         else:
             seasonfolders = 0
+            
+        if seasonpacks == "on":
+            seasonpacks = 1
+        else:
+            seasonpacks = 0
 
         if paused == "on":
             paused = 1
@@ -2305,7 +2338,7 @@ class Home:
                     sickbeard.showQueueScheduler.action.refreshShow(showObj) #@UndefinedVariable
                 except exceptions.CantRefreshException, e:
                     errors.append("Unable to refresh this show: "+ex(e))
-
+            showObj.seasonpacks = seasonpacks
             showObj.paused = paused
             showObj.air_by_date = air_by_date
             showObj.lang = tvdb_lang

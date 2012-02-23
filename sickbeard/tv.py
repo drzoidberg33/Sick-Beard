@@ -60,7 +60,8 @@ class TVShow(object):
         self.runtime = 0
         self.quality = int(sickbeard.QUALITY_DEFAULT)
         self.seasonfolders = int(sickbeard.SEASON_FOLDERS_DEFAULT)
-
+        self.seasonpacks = int(sickbeard.SEASON_PACKS_DEFAULT)
+        
         self.status = ""
         self.airs = ""
         self.startyear = 0
@@ -527,6 +528,7 @@ class TVShow(object):
 
             self.quality = int(sqlResults[0]["quality"])
             self.seasonfolders = int(sqlResults[0]["seasonfolders"])
+            self.seasonpacks = int(sqlResults[0]["seasonpacks"])
             self.paused = int(sqlResults[0]["paused"])
 
             self._location = sqlResults[0]["location"]
@@ -816,6 +818,7 @@ class TVShow(object):
                         "airs": self.airs,
                         "status": self.status,
                         "seasonfolders": self.seasonfolders,
+                        "seasonpacks": self.seasonpacks,
                         "paused": self.paused,
                         "air_by_date": self.air_by_date,
                         "startyear": self.startyear,

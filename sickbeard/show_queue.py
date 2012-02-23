@@ -115,8 +115,8 @@ class ShowQueue(generic_queue.GenericQueue):
 
         return queueItemObj
 
-    def addShow(self, tvdb_id, showDir, default_status=None, quality=None, season_folders=None, lang="en"):
-        queueItemObj = QueueItemAdd(tvdb_id, showDir, default_status, quality, season_folders, lang)
+    def addShow(self, tvdb_id, showDir, default_status=None, quality=None, season_folders=None, season_packs=None, lang="en"):
+        queueItemObj = QueueItemAdd(tvdb_id, showDir, default_status, quality, season_folders, season_packs, lang)
         
         self.add_item(queueItemObj)
 
@@ -165,13 +165,14 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 
 class QueueItemAdd(ShowQueueItem):
-    def __init__(self, tvdb_id, showDir, default_status, quality, season_folders, lang):
+    def __init__(self, tvdb_id, showDir, default_status, quality, season_folders, season_packs, lang):
 
         self.tvdb_id = tvdb_id
         self.showDir = showDir
         self.default_status = default_status
         self.quality = quality
         self.season_folders = season_folders
+        self.season_packs = season_packs
         self.lang = lang
 
         self.show = None
@@ -243,6 +244,7 @@ class QueueItemAdd(ShowQueueItem):
             self.show.location = self.showDir
             self.show.quality = self.quality if self.quality else sickbeard.QUALITY_DEFAULT
             self.show.seasonfolders = self.season_folders if self.season_folders != None else sickbeard.SEASON_FOLDERS_DEFAULT
+            self.show.seasonpacks = self.season_packs if self.season_packs != None else sickbeard.SEASON_PACKS_DEFAULT
             self.show.paused = False
             
             # be smartish about this

@@ -382,7 +382,7 @@ def findSeason(show, season):
                 anyWanted = True
 
         # if we need every ep in the season and there's nothing better then just download this and be done with it
-        if allWanted and bestSeasonNZB.quality == highest_quality_overall:
+        if allWanted and bestSeasonNZB.quality == highest_quality_overall and show.seasonpacks:
             logger.log(u"Every ep in this season is needed, downloading the whole NZB "+bestSeasonNZB.name)
             epObjs = []
             for curEpNum in allEps:
